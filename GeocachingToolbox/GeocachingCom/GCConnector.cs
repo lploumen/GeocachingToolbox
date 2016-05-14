@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -13,8 +14,13 @@ namespace GeocachingToolbox.GeocachingCom
 
         public Task<string> GetPage(string url)
         {
-            var response = webBrowser.GetRequest(UrlPrefix + url);
+            var response = webBrowser.GetRequestAsString(UrlPrefix + url);
             return response;
+        }
+
+        public Task<HttpContent> GetContent(string fullUrl,IDictionary<string,string> getData)
+        {
+            return webBrowser.GetRequest(fullUrl, getData);
         }
 
         public Task<string> PostToPage(string url, IDictionary<string, string> parameters)
