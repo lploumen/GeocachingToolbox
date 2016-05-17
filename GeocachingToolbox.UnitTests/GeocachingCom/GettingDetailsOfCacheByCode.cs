@@ -33,7 +33,7 @@ namespace GeocachingToolbox.UnitTests.GeocachingCom
             {
                 Code = "GC5V392",
                 Name = "Biało-czerwoni",
-                Waypoint = new Location(54, 23.565M, 18, 35.752M),
+                //Waypoint = new Location(54, 23.565M, 18, 35.752M),
                 Type = GeocacheType.Traditional,
                 Status = GeocacheStatus.Published,
                 Size = GeocacheSize.Micro,
@@ -49,6 +49,7 @@ namespace GeocachingToolbox.UnitTests.GeocachingCom
                 Hint = "magnetyk",
                 Owner = new GCUser("ratunku&koralik", -1)
             };
+            _expectedResult.SetWaypoint(new Location(54, 23.565M, 18, 35.752M));
         };
 
         Because of = () =>

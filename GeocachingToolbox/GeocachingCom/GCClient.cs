@@ -7,12 +7,15 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AngleSharp.Dom.Html;
 using AngleSharp.Parser.Html;
+using GeocachingToolbox.GeocachingCom.MapFetch;
+
 
 namespace GeocachingToolbox.GeocachingCom
 {
     public class GCClient : Client
     {
         private readonly IGCConnector _connector;
+        private MapFetcher _MapFetcher = new MapFetcher();
 
         public GCClient(IGCConnector connector = null)
         {
@@ -182,6 +185,11 @@ namespace GeocachingToolbox.GeocachingCom
             }
 
             return (IEnumerable<T>)nearest;
+        }
+
+        public override async Task<IEnumerable<T>> GetGeocachesFromMap<T>(Location topLeft, Location bottomRight) 
+        {
+            return (IEnumerable<T>) await _MapFetcher.FetchCaches(_connector, topLeft, bottomRight);
         }
 
         public override async Task PostGeocacheLogAsync<T>(T geocache, GeocacheLogType logType, DateTime date, string description)
@@ -413,7 +421,7 @@ namespace GeocachingToolbox.GeocachingCom
                 decimal.Parse(coords.Groups["latMin"].Value, CultureInfo.InvariantCulture),
                 int.Parse(coords.Groups["longDeg"].Value) * longDirection,
                 decimal.Parse(coords.Groups["longMin"].Value, CultureInfo.InvariantCulture));
-            gcGeocache.Waypoint = location;
+            gcGeocache.SetWaypoint(location);
         }
 
         private void ParseHiddenDate(GCGeocache gcGeocache, IHtmlDocument doc)

@@ -161,8 +161,8 @@ namespace GeocachingToolbox.Opencaching
             var location = json["location"].Value<string>();
             var latitudeLongitue = location.Split('|');
 
-            ocGeocache.Waypoint = new Location(decimal.Parse(latitudeLongitue[0], CultureInfo.InvariantCulture),
-                decimal.Parse(latitudeLongitue[1], CultureInfo.InvariantCulture));
+            ocGeocache.SetWaypoint(new Location(decimal.Parse(latitudeLongitue[0], CultureInfo.InvariantCulture),
+                decimal.Parse(latitudeLongitue[1], CultureInfo.InvariantCulture)));
 
             ocGeocache.Type = StringToGeocacheType(json["type"].Value<string>());
             ocGeocache.Size = StringToGeocacheSize(json["size2"].Value<string>());
@@ -215,6 +215,11 @@ namespace GeocachingToolbox.Opencaching
                 default:
                     return GeocacheStatus.Unknown;
             }
+        }
+
+        public override Task<IEnumerable<T>> GetGeocachesFromMap<T>(Location topLeft, Location bottomRight)
+        {
+            throw new NotImplementedException();
         }
 
         public override async Task PostGeocacheLogAsync<T>(T geocache, GeocacheLogType logType, DateTime date, string description)
@@ -296,8 +301,8 @@ namespace GeocachingToolbox.Opencaching
 
                 var coordsRaw = cache.First["location"].Value<string>();
                 var coords = coordsRaw.Split('|');
-                newCache.Waypoint = new Location(decimal.Parse(coords[0], CultureInfo.InvariantCulture),
-                    decimal.Parse(coords[1], CultureInfo.InvariantCulture));
+                newCache.SetWaypoint(new Location(decimal.Parse(coords[0], CultureInfo.InvariantCulture),
+                    decimal.Parse(coords[1], CultureInfo.InvariantCulture)));
 
                 list.Add(newCache);
             }

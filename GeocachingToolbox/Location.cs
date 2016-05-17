@@ -16,6 +16,12 @@ namespace GeocachingToolbox
             Longitude = longitude;
         }
 
+        public Location(double latitude, double longitude)
+        {
+            Latitude =(decimal) latitude;
+            Longitude = (decimal)longitude;
+        }
+
         public Location(int latitude, decimal latitudeMinutes,
             int longitude, decimal longitudeMinutes)
         {

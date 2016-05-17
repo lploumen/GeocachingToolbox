@@ -9,7 +9,7 @@ namespace GeocachingToolbox.GeocachingCom
 {
     public class GCConnector : IGCConnector
     {
-        private const string UrlPrefix = "http://www.geocaching.com/";
+        private const string UrlPrefix = "https://www.geocaching.com/";
         private WebBrowserSimulator webBrowser;
 
         public Task<string> GetPage(string url)
@@ -38,7 +38,7 @@ namespace GeocachingToolbox.GeocachingCom
                 { "ctl00$ContentBody$tbUsername", login },
                 { "ctl00$ContentBody$tbPassword", password },
                 { "ctl00$ContentBody$cbRememberMe", "on" },
-                { "ctl00$ContentBody$btnSignIn", "Sign In" }
+                { "ctl00$ContentBody$btnSignIn", "Sign+In" }
             };
 
             webBrowser = new WebBrowserSimulator();
