@@ -15,7 +15,8 @@ namespace GeocachingToolbox.GeocachingCom
     public class GCClient : Client
     {
         private readonly IGCConnector _connector;
-        private MapFetcher _MapFetcher = new MapFetcher();
+        private readonly MapFetcher _MapFetcher = new MapFetcher();
+        private GCMapToken _mapToken;
 
         public GCClient(IGCConnector connector = null)
         {
@@ -187,9 +188,11 @@ namespace GeocachingToolbox.GeocachingCom
             return (IEnumerable<T>)nearest;
         }
 
-        public override async Task<IEnumerable<T>> GetGeocachesFromMap<T>(Location topLeft, Location bottomRight) 
+        public override async Task<IEnumerable<T>> GetGeocachesFromMap<T>(Location topLeft, Location bottomRight)
         {
-            return (IEnumerable<T>) await _MapFetcher.FetchCaches(_connector, topLeft, bottomRight);
+            if (_mapToken == null)
+                _mapToken = await GetMapToken();
+            return (IEnumerable<T>)await _MapFetcher.FetchCaches(_connector, _mapToken, topLeft, bottomRight,User);
         }
 
         public override async Task PostGeocacheLogAsync<T>(T geocache, GeocacheLogType logType, DateTime date, string description)
@@ -588,6 +591,24 @@ namespace GeocachingToolbox.GeocachingCom
                 default:
                     throw new Exception("Unsupported type of log!");
             }
+        }
+
+        public async Task<GCMapToken> GetMapToken()
+        {
+            string sessionToken = "", userSession = "";
+            var page = await _connector.GetPage(GCConstants.URL_LIVE_MAP);
+            Match m = Regex.Match(page, GCConstants.PATTERN_SESSIONTOKEN);
+
+            if (m.Success)
+                sessionToken = m.Groups[1].Value;
+
+            m = Regex.Match(page, GCConstants.PATTERN_USERSESSION);
+            if (m.Success)
+                userSession = m.Groups[1].Value;
+
+            var mapToken = new GCMapToken { SessionToken = sessionToken, UserSession = userSession };
+
+            return mapToken;
         }
 
         public override string ToString()
