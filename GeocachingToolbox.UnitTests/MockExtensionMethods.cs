@@ -14,9 +14,41 @@ namespace GeocachingToolbox.UnitTests
         public static IMethodOptions<Task<string>> ReturnContentOf(this IMethodOptions<Task<string>> subject, string filePath)
         {
             return subject.Return(Task.FromResult(ReadContent(filePath)));// ReturnContentOf(subject, filePath);
-        } 
+        }
+        public static IMethodOptions<Task<byte[]>> ReturnContentAsByteArrayOf(this IMethodOptions<Task<byte[]>> subject, string filePath)
+        {
+            return subject.Return(Task.FromResult(ReadContentasByteArray(filePath)));// ReturnContentOf(subject, filePath);
+        }
 
-        private static string ReadContent(string filePath)
+        public static byte[] ReadContentasByteArray(string filePath)
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            var dottedFilePath = filePath.Replace('\\', '.');
+            var resourceName = "GeocachingToolbox.UnitTests." + dottedFilePath;
+            byte[] content ;
+
+            try
+            {
+                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                //using (StreamReader reader = new StreamReader(stream))
+                {
+                    using (var memoryStream = new MemoryStream())
+                    {
+                        stream.CopyTo(memoryStream);
+                        content = memoryStream.ToArray();
+                    }
+                }
+               
+            }
+            catch (ArgumentNullException)
+            {
+                throw new FileNotFoundException("Make sure that the file '" + filePath
+                                                + "' exists and has 'Build Action' set to 'Embedded Resource'.");
+            }
+            return content;
+        }
+
+         public static string ReadContent(string filePath)
         {
             var assembly = Assembly.GetExecutingAssembly();
             var dottedFilePath = filePath.Replace('\\', '.');
