@@ -26,10 +26,23 @@ namespace Examples
             DisplayUserInfo();
             ListNewestFoundGeocaches().GetAwaiter().GetResult();
             GetDetailsForNewestFoundGeocache().GetAwaiter().GetResult();
+            GetGeocacheByMap(new Location(50.6416774807, 5.9097003937), new Location(50.6637713105, 5.9530448914))
+                .GetAwaiter()
+                .GetResult();
 
             Console.Write("\n\n");
             Console.WriteLine("Press enter to close this window...");
             Console.Read();
+        }
+
+        private async Task GetGeocacheByMap(Location location, Location location1)
+        {
+            var caches = await client.GetGeocachesFromMap<Geocache>(location, location1);
+            foreach (var cache in caches)
+            {
+                Console.WriteLine($"{cache.Name} - {cache.Waypoint.Latitude} - {cache.Waypoint.Longitude} - Found : {cache.Found} - Type : {cache.Type}");
+                Console.WriteLine($"->{cache.Owner?.Name ?? "no user"}");
+            }
         }
 
         private void LogIn()
