@@ -23,7 +23,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
         private const int CT_LETTERBOX = 12;
 
 
-        public static bool parseMapPNG(Geocache cache, int[] bitmap, UTFGridPosition xy, int zoomlevel)
+        public static bool parseMapPNG(Geocache cache, int[] bitmap, UTFGridPosition xy, int zoomlevel, User currentUser)
         {
             int topX = xy.x * 4;
             int topY = xy.y * 4;
@@ -50,11 +50,10 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
             {
                 for (int y = topY; y < topY + 4; y++)
                 {
-                    int color = GetPixelColor(bitmap, x, y);// bitmap.getPixel(x, y);
+                    int color = GetPixelColor(bitmap, x, y);
 
-                    //if ((color >> 24) != 255)
-                    //int c = color >> 24;
-                    if (color == 0)
+                    uint c = (uint)color >> 24;
+                    if (c != 255)
                     {
                         continue; //transparent pixels (or semi_transparent) are only shadows of border
                     }
@@ -105,34 +104,32 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
                 switch (type)
                 {
                     case CT_TRADITIONAL:
-                        cache.Type = GeocacheType.Traditional;
-                        //cache.setType(CacheType.TRADITIONAL, zoomlevel);
+                        cache.SetGeocacheType(GeocacheType.Traditional, zoomlevel);
                         return true;
                     case CT_MULTI:
-                        cache.Type = GeocacheType.Multicache;
-                        //cache.setType(CacheType.MULTI, zoomlevel);
+                        cache.SetGeocacheType(GeocacheType.Multicache, zoomlevel);
                         return true;
                     case CT_MYSTERY:
-                        //cache.setType(CacheType.MYSTERY, zoomlevel);
-                        cache.Type = GeocacheType.Unknown;
+                        cache.SetGeocacheType(GeocacheType.Mystery, zoomlevel);
                         return true;
                     //case CT_EVENT:
                     //    cache.Type = GeocacheType.;
-                        //cache.setType(CacheType.EVENT, zoomlevel);
-                        return true;
+                    //cache.setType(CacheType.EVENT, zoomlevel);
                     case CT_EARTH:
-                        cache.Type = GeocacheType.Earthcache;
-                        //cache.setType(CacheType.EARTH, zoomlevel);
+                        cache.SetGeocacheType(GeocacheType.Earthcache, zoomlevel);
                         return true;
-                    //case CT_FOUND:
-                    //    cache.
+                    case CT_FOUND:
+                        cache.Found = true;
+                        return true;
                     //    cache.Found = true;
                     //    //cache.setFound(true);
                     //    return true;
-                    //case CT_OWN:
+                    case CT_OWN:
+                        cache.Owner = currentUser;
+                        return true;
                     //    cache.Owner = true;
-                        //cache.setOwnerUserId(Settings.getUsername());
-                       // return true;
+                    //cache.setOwnerUserId(Settings.getUsername());
+                    // return true;
                     //case CT_MEGAEVENT:
                     //    cache.setType(CacheType.MEGA_EVENT, zoomlevel);
                     //    return true;
@@ -149,8 +146,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
                     //    cache.setType(CacheType.VIRTUAL, zoomlevel);
                     //    return true;
                     case CT_LETTERBOX:
-                        cache.Type = GeocacheType.LetterboxHybrid;
-                        //cache.setType(CacheType.LETTERBOX, zoomlevel);
+                        cache.SetGeocacheType(GeocacheType.LetterboxHybrid, zoomlevel);
                         return true;
                     default:
                         cache.Type = GeocacheType.Unknown;
@@ -629,7 +625,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
 
         private static int GetPixelColor(int[] bitmap, int x, int y)
         {
-            return  bitmap[y * IconWidth + x];
+            return bitmap[y * IconWidth + x];
             //int R = bitmap[y * 4 * IconWidth + x * 4]; // lpl 20141113 & 0x00FF FF FF;
             //int G = bitmap[y * IconWidth * 4 + x * 4 + 1];
             //int B = bitmap[y * IconWidth * 4 + x * 4 + 2];

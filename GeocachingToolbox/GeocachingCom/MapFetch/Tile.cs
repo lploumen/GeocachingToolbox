@@ -1,3 +1,4 @@
+//#define SAVETILES
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using ImageTools;
 using ImageTools.IO.Png;
 using Newtonsoft.Json;
+using PCLStorage;
 
 namespace GeocachingToolbox.GeocachingCom.MapFetch
 {
@@ -39,6 +41,17 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
             }
         }
 
+        public Tile(int tileX, int tileY, int zoomlevel)
+        {
+            Zoomlevel = zoomlevel; //Math.Max(Math.Min(zoomlevel, ZoomlevelMax), ZoomlevelMin);
+
+            TileX = tileX;
+            TileY = tileY;
+
+            Viewport = new Viewport(GetCoord(new UTFGridPosition(0, 0)), GetCoord(new UTFGridPosition(63, 63)));
+        }
+
+
         public Tile(Location origin, int zoomlevel)
         {
             Zoomlevel = Math.Max(Math.Min(zoomlevel, ZoomlevelMax), ZoomlevelMin);
@@ -61,7 +74,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
             double pixX = TileX * TILE_SIZE + pos.x * 4;
             double pixY = TileY * TILE_SIZE + pos.y * 4;
 
-            decimal lonDeg = (decimal) (((360.0 * pixX) / NumberOfPixels[Zoomlevel]) - 180.0);
+            decimal lonDeg = (decimal)(((360.0 * pixX) / NumberOfPixels[Zoomlevel]) - 180.0);
             double latRad = Math.Atan(Math.Sinh(Math.PI * (1 - 2 * pixY / NumberOfPixels[Zoomlevel])));
             return new Location(ConvertToDegrees(latRad), lonDeg);
         }
@@ -74,7 +87,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
          */
         private int CalcX(Location origin)
         {
-            return (int)((origin.Longitude + (decimal) 180.0) / (decimal) 360.0 * NumberOfTiles[Zoomlevel]);
+            return (int)((origin.Longitude + (decimal)180.0) / (decimal)360.0 * NumberOfTiles[Zoomlevel]);
         }
 
         /**
@@ -87,7 +100,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
             // return (int) ((1 - (Math.log(Math.tan(latRad) + (1 / Math.cos(latRad))) / Math.PI)) / 2 * numberOfTiles);
 
             // Optimization from Bing
-            var sinLatRad = Math.Sin(ConvertToRadians((double) origin.Latitude));
+            var sinLatRad = Math.Sin(ConvertToRadians((double)origin.Latitude));
             return (int)((0.5 - Math.Log((1 + sinLatRad) / (1 - sinLatRad)) / (4 * Math.PI)) * NumberOfTiles[Zoomlevel]);
         }
 
@@ -98,7 +111,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
 
         public static decimal ConvertToDegrees(double angrad)
         {
-            return (decimal) (angrad * 180.0 / Math.PI);
+            return (decimal)(angrad * 180.0 / Math.PI);
         }
 
 
@@ -134,7 +147,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
         {
 
             int zoom = (int)Math.Floor(
-                Math.Log(360.0 / (double) Math.Abs(left.Longitude - right.Longitude))
+                Math.Log(360.0 / (double)Math.Abs(left.Longitude - right.Longitude))
                 / Math.Log(2)
                 );
 
@@ -166,8 +179,8 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
             int zoom = (int)Math.Ceiling(
                 Math.Log(2.0 * Math.PI /
                          Math.Abs(
-                             asinh(tanGrad((double) bottom.Latitude))
-                             - asinh(tanGrad((double) top.Latitude))
+                             asinh(tanGrad((double)bottom.Latitude))
+                             - asinh(tanGrad((double)top.Latitude))
                              )
                     ) / Math.Log(2)
                 );
@@ -187,10 +200,29 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
         {
             var tiles = new HashSet<Tile>();
             int zoom = Math.Min(Tile.CalcZoomLon(bottomLeft, topRight), Tile.CalcZoomLat(bottomLeft, topRight));
-            tiles.Add(new Tile(bottomLeft, zoom));
-            tiles.Add(new Tile(new Location(bottomLeft.Latitude, topRight.Longitude), zoom));
-            tiles.Add(new Tile(new Location(topRight.Latitude, bottomLeft.Longitude), zoom));
-            tiles.Add(new Tile(topRight, zoom));
+
+            Tile tileBottomLeft = new Tile(bottomLeft, zoom);
+            Tile tileTopRight = new Tile(topRight, zoom);
+
+            int xLow = Math.Min(tileBottomLeft.TileX, tileTopRight.TileX);
+            int xHigh = Math.Max(tileBottomLeft.TileX, tileTopRight.TileX);
+
+            int yLow = Math.Min(tileBottomLeft.TileY, tileTopRight.TileY);
+            int yHigh = Math.Max(tileBottomLeft.TileY, tileTopRight.TileY);
+
+            for (int xNum = xLow; xNum <= xHigh; xNum++)
+            {
+                for (int yNum = yLow; yNum <= yHigh; yNum++)
+                {
+                    tiles.Add(new Tile(xNum, yNum, zoom));
+                }
+            }
+
+
+            //tiles.Add(new Tile(bottomLeft, zoom));
+            //tiles.Add(new Tile(new Location(bottomLeft.Latitude, topRight.Longitude), zoom));
+            //tiles.Add(new Tile(new Location(topRight.Latitude, bottomLeft.Longitude), zoom));
+            //tiles.Add(new Tile(topRight, zoom));
             return tiles;
         }
 
@@ -235,7 +267,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
 
 
 
-        public static async Task<int[]> RequestMapTile(/*MapToken token*/Dictionary<string, string> parameters, IGCConnector gcConnector)
+        public static async Task<int[]> RequestMapTile(GCMapToken token, Dictionary<string, string> parameters, IGCConnector gcConnector)
         {
             //m_Token = token;
             //var parameters = new Dictionary<string, string>
@@ -246,11 +278,11 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
             //        {"ep", "1"},
             //};
 
-            //if (token != null)
-            //{
-            //    parameters.Add("k", token.UserSession);
-            //    parameters.Add("st", token.SessionToken);
-            //}
+            if (token != null)
+            {
+                parameters.Add("k", token.UserSession);
+                parameters.Add("st", token.SessionToken);
+            }
 
 
             //if (Zoomlevel != 14)
@@ -261,10 +293,25 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
 
             var urlString = FormUrl("http://tiles01.geocaching.com/map/map.png", parameters);
             Debug.WriteLine("Tile download url :" + urlString);
+
+
+
             //var urlString = FormUrl("http://tiles0" + tileServerNb + ".geocaching.com/map/map.png", parameters);
 
-            HttpContent content = await gcConnector.GetContent(urlString,null);//, HttpMethod.Get);
+            HttpContent content = await gcConnector.GetContent(urlString, null);//, HttpMethod.Get);
             byte[] tileBytes = await content.ReadAsByteArrayAsync();
+
+#if SAVETILES
+            IFolder rootFolfer = await FileSystem.Current.GetFolderFromPathAsync("d:\\");
+            IFolder geoFolder = await rootFolfer.CreateFolderAsync("geo",CreationCollisionOption.OpenIfExists);
+            string mapImageTileName = $"map_{parameters["x"]}_{parameters["y"]}_{parameters["z"]}.png";
+            IFile file = await geoFolder.CreateFileAsync(mapImageTileName, CreationCollisionOption.ReplaceExisting);
+            using (System.IO.Stream stream = await file.OpenAsync(FileAccess.ReadAndWrite))
+            {
+                stream.Write(tileBytes,0,tileBytes.Length);
+            }
+            
+#endif
 
             ExtendedImage img = new ExtendedImage();
             PngDecoder pngDecoder = new PngDecoder();
@@ -280,7 +327,8 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
                 int R = img.Pixels[i * 4];
                 int G = img.Pixels[i * 4 + 1];
                 int B = img.Pixels[i * 4 + 2];
-                imgPixelsInt[i] = (R << 16) + (G << 8) + B;
+                int A = img.Pixels[i * 4 + 3];
+                imgPixelsInt[i] = (A << 24) + (R << 16) + (G << 8) + B;
             }
 
             return imgPixelsInt;
@@ -294,23 +342,19 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
         //    new PhotoDownloader().DownloadPng(processImage, urlString);
         //}
         private int m_UrlMapInfoServerNumber = 1;
-        public async Task<List<Geocache>> RequestMapInfo(string url, Dictionary<string, string> parameters, string referer, int[] tilePixels, int zoomLevel)
+        public async Task<List<GCGeocache>> RequestMapInfo(IGCConnector gcConnecter, string url, Dictionary<string, string> parameters, string referer, int[] tilePixels, int zoomLevel,User currentUser)
         {
-            //var urlString = FormUrl(url, parameters);
-            WebBrowserSimulator webBrowserSimulator = new WebBrowserSimulator();
-            //string data = await webBrowserSimulator.GetRequestAsString(urlString);
-
             String urlString = string.Format("http://tiles01.geocaching.com/map/map.info", m_UrlMapInfoServerNumber);
             var urlString2 = FormUrl(urlString, parameters);
             Debug.WriteLine("Tile info url :" + urlString2);
             m_UrlMapInfoServerNumber = (m_UrlMapInfoServerNumber + 1) % 4 + 1;
 
-            String data = await webBrowserSimulator.GetRequestAsString(urlString2);
+            String data = await gcConnecter.GetPage(urlString2);
 
-            return ParseMapInfos(data, tilePixels, new CancellationToken(), zoomLevel);
+            return ParseMapInfos(data, tilePixels, new CancellationToken(), zoomLevel,currentUser);
         }
 
-        protected List<Geocache> ParseMapInfos(String jsonResult, int[] TilePixels, CancellationToken ct, int zoomLevel)
+        protected List<GCGeocache> ParseMapInfos(String jsonResult, int[] TilePixels, CancellationToken ct, int zoomLevel,User currentUser)
         {
             if (!String.IsNullOrWhiteSpace(jsonResult))
             {
@@ -372,7 +416,7 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
                 //}
 
                 startTimer = Environment.TickCount;
-                var caches = new List<Geocache>();
+                var caches = new List<GCGeocache>();
 
                 foreach (var id in positions.Keys)
                 {
@@ -383,14 +427,16 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
                     var cache = new GCGeocache()
                     {
                         Name = nameCache[id],
+                        Code = id
                         //HasFullCacheInfo = false,
                     };
+                    caches.Add(cache);
                     cache.SetWaypoint(GetCoord(xy), zoomLevel);
-                    //cache.SetCoordinates(GetCoord(xy), zoomLevel);
-                    //caches.Add(cache);
-                    if (IconDecoder.parseMapPNG(cache, TilePixels, xy, Zoomlevel))
+                    cache.SetGeocacheType(GeocacheType.Unknown, zoomLevel);
+                    foreach (var singlepos in positions[id])
                     {
-                        caches.Add(cache);
+                        if (IconDecoder.parseMapPNG(cache, TilePixels, /*xy*/ singlepos, Zoomlevel,currentUser))
+                            break;
                     }
                 }
                 Debug.WriteLine("Parsing images : " + (Environment.TickCount - startTimer) + " ms");

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace GeocachingToolbox.GeocachingCom.MapFetch
@@ -16,19 +17,18 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
             return ts.TotalMilliseconds;
         }
 
-        //public Action<byte[]> DebugTile { get; set; }
-        public async Task<List<Geocache>> FetchCaches(IGCConnector gcConnector,Location topLeft,Location bottomRight)
+        public async Task<List<GCGeocache>> FetchCaches(IGCConnector gcConnector,GCMapToken mapToken, Location topLeft,Location bottomRight,User currentUser)
         {
             var viewport = new Viewport(topLeft,bottomRight);
 
             var tiles = Tile.GetTilesForViewport(viewport);
-            var caches = new List<Geocache>();
+            var caches = new List<GCGeocache>();
             var tsk = new List<Task>();
             foreach (Tile tile in tiles)
             {
-                var t = Task.Run(async () =>
+                //var t = Task.Run(async () =>
                 {
-                   
+
                     if (!_tileCache.Contains(tile))
                     {
                         var parameters = new Dictionary<string, string>()
@@ -47,12 +47,12 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
                         var currentTile = tile;
                         try
                         {
-                            var tilePixels = await Tile.RequestMapTile(parameters, gcConnector);
+                            var tilePixels = await Tile.RequestMapTile(mapToken, parameters, gcConnector);
 
                             var c =
                                 await
-                                    currentTile.RequestMapInfo(GCConstants.URL_MAP_INFO, parameters,
-                                        GCConstants.URL_LIVE_MAP, tilePixels,currentTile.Zoomlevel);
+                                    currentTile.RequestMapInfo(gcConnector, GCConstants.URL_MAP_INFO, parameters,
+                                        GCConstants.URL_LIVE_MAP, tilePixels, currentTile.Zoomlevel,currentUser);
                             caches.AddRange(c);
                         }
                         catch (Exception ex)
@@ -66,11 +66,14 @@ namespace GeocachingToolbox.GeocachingCom.MapFetch
                     {
                         Debug.WriteLine("Reusing tile");
                     }
-                });
-                tsk.Add(t);
+                }
+                //  });
+              //  tsk.Add(t);
             }
-            await Task.WhenAll(tsk);
-            return caches;
+            //await Task.WhenAll(tsk);
+            caches.RemoveAll(c => !viewport.Contains(c.Waypoint));
+            return caches.GroupBy(item => item.Code).Select(group => group.First()).ToList();
+          // return caches;
         }
     }
 }
