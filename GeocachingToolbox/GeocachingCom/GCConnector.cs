@@ -14,7 +14,12 @@ namespace GeocachingToolbox.GeocachingCom
 
         public Task<string> GetPage(string url)
         {
-            var response = webBrowser.GetRequestAsString(UrlPrefix + url);
+            string usedUrl = url;
+            if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            {
+                usedUrl = UrlPrefix + url;
+            }
+            var response = webBrowser.GetRequestAsString(usedUrl);
             return response;
         }
 
