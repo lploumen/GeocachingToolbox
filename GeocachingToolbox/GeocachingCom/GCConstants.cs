@@ -5,6 +5,7 @@ namespace GeocachingToolbox.GeocachingCom
 {
     public class GCConstants
     {
+        public const string REQUEST_VERIFICATION_TOKEN = "__RequestVerificationToken";
         public const string PATTERN_USERSESSION = "UserSession\\('([^']+)'";
         public const string PATTERN_SESSIONTOKEN = "sessionToken:'([^']+)'";
         public const string GC_URL = "https://www.geocaching.com/";

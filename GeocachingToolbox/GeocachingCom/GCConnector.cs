@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
+using AngleSharp.Parser.Html;
 
 namespace GeocachingToolbox.GeocachingCom
 {
@@ -40,26 +41,31 @@ namespace GeocachingToolbox.GeocachingCom
             return response;
         }
 
+        private string extractRequestVerificationToken(string page)
+        {
+            var parser = new HtmlParser();
+            var document = parser.Parse(page);
+            var inputElement = document.QuerySelector($"input[name=\"{GCConstants.REQUEST_VERIFICATION_TOKEN}\"]");
+            return inputElement.GetAttribute("value");
+        }
+
         public async Task<string> Login(string login, string password)
         {
+            webBrowser = new WebBrowserSimulator();
+
+            var loginPage = await webBrowser.GetRequestAsString(UrlPrefix + "/account/login?ReturnUrl=/play");
+            var verificationToken = extractRequestVerificationToken(loginPage);
 
             IDictionary<string, string> parameters = new Dictionary<string, string>
             {
-                { "__EVENTTARGET", ""  },
-                { "__EVENTARGUMENT", "" },
-                { "ctl00$ContentBody$tbUsername", login },
-                { "ctl00$ContentBody$tbPassword", password },
-                { "ctl00$ContentBody$cbRememberMe", "on" },
-                { "ctl00$ContentBody$btnSignIn", "Login" }
+                { "Username", login },
+                { "Password", password },
+                { GCConstants.REQUEST_VERIFICATION_TOKEN, verificationToken },
             };
-            webBrowser = new WebBrowserSimulator();
 
-            await webBrowser.PostRequest(UrlPrefix + "login/default.aspx?RESETCOMPLETE=Y&redir=https%3a%2f%2fwww.geocaching.com%2fmy%2fdefault.aspx", parameters);
-            var response = await webBrowser.GetRequestAsString("https://www.geocaching.com/my/default.aspx");
+            await webBrowser.PostRequest(UrlPrefix + "account/login/?returnUrl=https%3a%2f%2fwww.geocaching.com/my/default.aspx", parameters);
 
-            //var response = await webBrowser.PostRequest(UrlPrefix + "account/login/?returnUrl=https%3a%2f%2fwww.geocaching.com/my/default.aspx", parameters);
-
-            //response = await webBrowser.GetRequestAsString(UrlPrefix + "my/default.aspx");
+            var response = await webBrowser.GetRequestAsString(UrlPrefix + "my/default.aspx");
             return response;
         }
     }
